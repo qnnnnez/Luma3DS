@@ -34,14 +34,16 @@ struct
 {
     const char *name;
     GDBCommandHandler handler;
+    const char *helpMessage;
 } remoteCommandHandlers[] =
 {
-    { "syncrequestinfo"   , GDB_REMOTE_COMMAND_HANDLER(SyncRequestInfo) },
-    { "translatehandle"   , GDB_REMOTE_COMMAND_HANDLER(TranslateHandle) },
-    { "getmmuconfig"      , GDB_REMOTE_COMMAND_HANDLER(GetMmuConfig) },
-    { "getmemregions"     , GDB_REMOTE_COMMAND_HANDLER(GetMemRegions) },
-    { "flushcaches"       , GDB_REMOTE_COMMAND_HANDLER(FlushCaches) },
-    { "toggleextmemaccess", GDB_REMOTE_COMMAND_HANDLER(ToggleExternalMemoryAccess) },
+    { "help"              , GDB_REMOTE_COMMAND_HANDLER(DisplayHelpMessage), "Display this help message" },
+    { "syncrequestinfo"   , GDB_REMOTE_COMMAND_HANDLER(SyncRequestInfo), "Get information about sync request from current thread" },
+    { "translatehandle"   , GDB_REMOTE_COMMAND_HANDLER(TranslateHandle), "Translate a handle into a kernel address and get related information" },
+    { "getmmuconfig"      , GDB_REMOTE_COMMAND_HANDLER(GetMmuConfig), "Get information about MMU configuration" },
+    { "getmemregions"     , GDB_REMOTE_COMMAND_HANDLER(GetMemRegions), "List virtual memory regions for current process" },
+    { "flushcaches"       , GDB_REMOTE_COMMAND_HANDLER(FlushCaches), "Flush all CPU caches" },
+    { "toggleextmemaccess", GDB_REMOTE_COMMAND_HANDLER(ToggleExternalMemoryAccess), "Enable/disable the mapping PA 00000000..30000000 -> VA 80000000..B0000000" },
 };
 
 static const char *GDB_SkipSpaces(const char *pos)
@@ -49,6 +51,27 @@ static const char *GDB_SkipSpaces(const char *pos)
     const char *nextpos;
     for(nextpos = pos; *nextpos != 0 && ((*nextpos >= 9 && *nextpos <= 13) || *nextpos == ' '); nextpos++);
     return nextpos;
+}
+
+GDB_DECLARE_REMOTE_COMMAND_HANDLER(DisplayHelpMessage)
+{
+    char outbuf[GDB_BUF_LEN / 2 + 1];
+    int n = sprintf(outbuf, "List of monitor commands:\n\n");
+    
+    int commandCount = sizeof(remoteCommandHandlers) / sizeof(remoteCommandHandlers[0]);
+    int i;
+    for (i = 0; i < commandCount; ++i)
+    {
+        n += sprintf(outbuf + n, "%s -- %s\n", remoteCommandHandlers[i].name, remoteCommandHandlers[i].helpMessage);
+        if (n > GDB_BUF_LEN / 2)
+        {
+            n = GDB_BUF_LEN / 2;
+            outbuf[n] = '\0';
+            break;
+        }
+    }
+
+    return GDB_SendHexPacket(ctx, outbuf, n);
 }
 
 GDB_DECLARE_REMOTE_COMMAND_HANDLER(SyncRequestInfo)
