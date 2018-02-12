@@ -55,7 +55,7 @@ static const char *GDB_SkipSpaces(const char *pos)
 
 GDB_DECLARE_REMOTE_COMMAND_HANDLER(DisplayHelpMessage)
 {
-    char outbuf[GDB_BUF_LEN / 2 + 1];
+    char outbuf[GDB_BUF_LEN / 2 + 256]; // 256 ought to be enough
     int n = sprintf(outbuf, "List of monitor commands:\n\n");
     
     int commandCount = sizeof(remoteCommandHandlers) / sizeof(remoteCommandHandlers[0]);
@@ -63,10 +63,9 @@ GDB_DECLARE_REMOTE_COMMAND_HANDLER(DisplayHelpMessage)
     for (i = 0; i < commandCount; ++i)
     {
         n += sprintf(outbuf + n, "%s -- %s\n", remoteCommandHandlers[i].name, remoteCommandHandlers[i].helpMessage);
-        if (n > GDB_BUF_LEN / 2)
+        if (n >= GDB_BUF_LEN / 2)
         {
             n = GDB_BUF_LEN / 2;
-            outbuf[n] = '\0';
             break;
         }
     }
